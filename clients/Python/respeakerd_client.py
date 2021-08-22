@@ -27,7 +27,7 @@ class RespeakerdClient(object):
         self.sock = None
         self.lock = threading.Lock()    # protect self.sock object
         self.stop = False
-        self.buff = ''
+        self.buff = b''
 
     def connect(self):
         logger.info('Start to connect to the socket: {} ...'.format(SOCKET_FILE))
@@ -36,8 +36,8 @@ class RespeakerdClient(object):
                 self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
                 self.sock.setblocking(0)
                 self.sock.connect(SOCKET_FILE)
-        except socket.error, msg:
-            logger.error("Error when connect to the socket: {}".format(msg))
+        except socket.error:
+            logger.error('Error when connect to the socket')
             self.stop = True
             return False
         except socket.timeout:
@@ -59,7 +59,7 @@ class RespeakerdClient(object):
         try:
             with self.lock:
                 msg = json.dumps(json_obj) + "\r\n"
-                self.sock.sendall(msg)
+                self.sock.sendall(msg.encode())
         except socket.error as e:
             if e.errno == 32:
                 raise DisconnectException
@@ -73,7 +73,7 @@ class RespeakerdClient(object):
 
     def recv_all(self):
         while not self.stop:
-            chunk = ''
+            chunk = b''
             try:
                 with self.lock:
                     # will block to timeout
@@ -115,12 +115,12 @@ class RespeakerdClient(object):
         return json_obj
 
     def _cut_line(self):
-        line = ''
-        index = self.buff.find('\r\n')
+        line = b''
+        index = self.buff.find('\r\n'.encode())
         if index > -1:
             line = self.buff[:index+2]
             self.buff = self.buff[index+2:]
-            line = line.strip('\r\n')
+            line = line.strip('\r\n'.encode())
 
         return line
 
@@ -135,7 +135,7 @@ if __name__ == "__main__":
 
     while True:
         try:
-            print client.try_get_json()
+            print(client.try_get_json())
             client.send([0])
             time.sleep(0.1)
         except KeyboardInterrupt:
